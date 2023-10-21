@@ -4,7 +4,7 @@ use anyhow::Result;
 use quinn::{ClientConfig, Endpoint};
 use tracing::info;
 
-use unnamed::Message;
+use quic_chat::Message;
 
 #[tokio::main]
 async fn main() -> Result<()> {
