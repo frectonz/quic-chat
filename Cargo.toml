@@ -1,0 +1,15 @@
+[package]
+name = "quic-chat"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.75"
+quinn = "0.10.2"
+rmp-serde = "1.1.2"
+rustls = { version = "0.21.7", features = ["dangerous_configuration", "quic"] }
+serde = { version = "1.0.189", features = ["derive"] }
+tokio = { version = "1.33.0", features = ["full"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.17"
+
