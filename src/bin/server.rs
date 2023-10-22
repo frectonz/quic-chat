@@ -27,9 +27,9 @@ async fn main() -> Result<()> {
         info!("opening bidirectional stream");
         let (mut send_stream, mut recv_stream) = conn.open_bi().await?;
 
-        send_msg(&mut send_stream, "Hello client").await?;
+        send_msg(&mut send_stream, "Hello client".into()).await?;
         messages.push(recv_msg(&mut recv_stream).await?);
-        send_msg(&mut send_stream, "message received").await?;
+        send_msg(&mut send_stream, "message received".into()).await?;
 
         send_stream.finish().await?;
     }
@@ -43,7 +43,6 @@ pub fn make_server_endpoint(bind_addr: SocketAddr) -> Result<Endpoint> {
     Ok(endpoint)
 }
 
-/// Returns default server configuration along with its certificate.
 pub fn configure_server() -> Result<ServerConfig> {
     let crt = std::fs::read("cert/cert.der")?;
     let key = std::fs::read("cert/key.der")?;

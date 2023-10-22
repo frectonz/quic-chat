@@ -24,8 +24,13 @@ impl Message {
     }
 }
 
-pub async fn send_msg(stream: &mut SendStream, msg: &str) -> Result<()> {
-    let msg = Message::new(msg);
+impl From<&str> for Message {
+    fn from(content: &str) -> Self {
+        Message::new(content)
+    }
+}
+
+pub async fn send_msg(stream: &mut SendStream, msg: Message) -> Result<()> {
     stream.write_all(&msg.encode()?).await?;
     info!("sent msg: {}", msg.content);
     Ok(())

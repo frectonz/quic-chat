@@ -1,10 +1,34 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
+use clap::{Parser, Subcommand};
 use quinn::{ClientConfig, Endpoint};
 use tracing::info;
 
-use quic_chat::{recv_msg, send_msg};
+use quic_chat::{recv_msg, send_msg, Message};
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Post { msg: String },
+    Get,
+}
+
+impl Into<Message> for Commands {
+    fn into(self) -> Message {
+        use Commands::*;
+        match self {
+            Get => Message::new("GET"),
+            Self::Post { msg } => Message::new(&msg),
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -13,6 +37,8 @@ async fn main() -> Result<()> {
             .with_max_level(tracing::Level::INFO)
             .finish(),
     )?;
+
+    let cli = Cli::parse();
 
     let server_addr = "127.0.0.1:5000".parse()?;
     let client_addr = "127.0.0.1:0".parse()?;
@@ -27,7 +53,7 @@ async fn main() -> Result<()> {
     let (mut send_stream, mut recv_stream) = connection.accept_bi().await?;
 
     recv_msg(&mut recv_stream).await?;
-    send_msg(&mut send_stream, "Hi from the client").await?;
+    send_msg(&mut send_stream, cli.command.into()).await?;
     recv_msg(&mut recv_stream).await?;
 
     send_stream.finish().await?;
