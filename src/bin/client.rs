@@ -20,12 +20,12 @@ enum Commands {
     Get,
 }
 
-impl Into<Message> for Commands {
-    fn into(self) -> Message {
+impl From<Commands> for Message {
+    fn from(val: Commands) -> Self {
         use Commands::*;
-        match self {
+        match val {
             Get => Message::new("GET"),
-            Self::Post { msg } => Message::new(&msg),
+            Post { msg } => Message::new(&msg),
         }
     }
 }
