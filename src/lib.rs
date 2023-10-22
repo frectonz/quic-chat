@@ -5,7 +5,7 @@ use tracing::info;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Message {
-    content: String,
+    pub content: String,
 }
 
 impl Message {

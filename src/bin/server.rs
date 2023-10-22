@@ -28,7 +28,16 @@ async fn main() -> Result<()> {
         let (mut send_stream, mut recv_stream) = conn.open_bi().await?;
 
         send_msg(&mut send_stream, "Hello client".into()).await?;
-        messages.push(recv_msg(&mut recv_stream).await?);
+        let msg = recv_msg(&mut recv_stream).await?;
+
+        if msg.content == "GET" {
+            let data = rmp_serde::to_vec(&messages)?;
+            send_stream.write_all(&data).await?;
+            info!("sent a list of messages: {}", messages.len());
+        } else {
+            messages.push(msg);
+        }
+
         send_msg(&mut send_stream, "message received".into()).await?;
 
         send_stream.finish().await?;

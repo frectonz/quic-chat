@@ -52,9 +52,23 @@ async fn main() -> Result<()> {
     info!("accepting bidirectional stream");
     let (mut send_stream, mut recv_stream) = connection.accept_bi().await?;
 
+    let msg: Message = cli.command.into();
+
     recv_msg(&mut recv_stream).await?;
-    send_msg(&mut send_stream, cli.command.into()).await?;
-    recv_msg(&mut recv_stream).await?;
+    send_msg(&mut send_stream, msg.clone()).await?;
+
+    if msg.content == "GET" {
+        info!("waiting for data");
+
+        let mut buf = [0u8; 1024];
+        let read_data = recv_stream.read(&mut buf).await?;
+        info!("read data: {read_data:?}");
+
+        let messages: Vec<Message> = rmp_serde::from_slice(&buf)?;
+        dbg!(messages);
+    } else {
+        recv_msg(&mut recv_stream).await?;
+    }
 
     send_stream.finish().await?;
 
