@@ -4,7 +4,7 @@ use anyhow::Result;
 use quinn::{Endpoint, ServerConfig};
 use tracing::info;
 
-use quic_chat::Message;
+use quic_chat::{recv_msg, send_msg};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,15 +17,20 @@ async fn main() -> Result<()> {
     let server_addr = "127.0.0.1:5000".parse()?;
     let endpoint = make_server_endpoint(server_addr)?;
 
+    let mut messages = Vec::new();
+
     info!("waiting for connection...");
     while let Some(conn) = endpoint.accept().await {
         info!("connection accepted: addr={}", conn.remote_address());
         let conn = conn.await?;
 
-        let (mut send_stream, _) = conn.open_bi().await?;
-        let msg = Message::new("Hello, World!").encode()?;
-        send_stream.write_all(&msg).await?;
-        info!("sent msg: {msg:?}");
+        info!("opening bidirectional stream");
+        let (mut send_stream, mut recv_stream) = conn.open_bi().await?;
+
+        send_msg(&mut send_stream, "Hello client").await?;
+        messages.push(recv_msg(&mut recv_stream).await?);
+        send_msg(&mut send_stream, "message received").await?;
+
         send_stream.finish().await?;
     }
 
