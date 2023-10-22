@@ -45,9 +45,11 @@
         };
 
         devShells.default = mkShell {
-          packages = [
+          buildInputs = [
             rust-bin.stable.latest.default
             rust-analyzer
+            just
+            fzf
           ];
         };
 
