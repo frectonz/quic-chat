@@ -4,7 +4,7 @@ use anyhow::Result;
 use quinn::{Endpoint, ServerConfig};
 use tracing::info;
 
-use quic_chat::{recv_msg, send_msg};
+use quic_chat::{recv_msg, send_msg, Message};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,16 +30,18 @@ async fn main() -> Result<()> {
         send_msg(&mut send_stream, "Hello client".into()).await?;
         let msg = recv_msg(&mut recv_stream).await?;
 
-        if msg.content == "GET" {
-            let data = rmp_serde::to_vec(&messages)?;
-            send_stream.write_all(&data).await?;
-            info!("sent a list of messages: {}", messages.len());
-        } else {
-            messages.push(msg);
+        match &msg {
+            Message::GetAll => {
+                let data = rmp_serde::to_vec(&messages)?;
+                send_stream.write_all(&data).await?;
+                info!("sent a list of messages: {}", messages.len());
+            }
+            Message::Post { content: _ } => {
+                messages.push(msg);
+            }
         }
 
         send_msg(&mut send_stream, "message received".into()).await?;
-
         send_stream.finish().await?;
     }
 

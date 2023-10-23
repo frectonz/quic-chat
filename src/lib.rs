@@ -4,13 +4,14 @@ use serde::{Deserialize, Serialize};
 use tracing::info;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Message {
-    pub content: String,
+pub enum Message {
+    GetAll,
+    Post { content: String },
 }
 
 impl Message {
-    pub fn new(content: &str) -> Self {
-        Self {
+    pub fn new_post(content: &str) -> Self {
+        Self::Post {
             content: content.to_owned(),
         }
     }
@@ -22,17 +23,24 @@ impl Message {
     pub fn decode(slice: &[u8]) -> Result<Self> {
         Ok(rmp_serde::from_slice(slice)?)
     }
+
+    pub fn content(&self) -> &str {
+        match self {
+            Self::GetAll => "GET_ALL",
+            Self::Post { content } => &content,
+        }
+    }
 }
 
 impl From<&str> for Message {
     fn from(content: &str) -> Self {
-        Message::new(content)
+        Message::new_post(content)
     }
 }
 
 pub async fn send_msg(stream: &mut SendStream, msg: Message) -> Result<()> {
     stream.write_all(&msg.encode()?).await?;
-    info!("sent msg: {}", msg.content);
+    info!("sent msg: {msg:?}");
     Ok(())
 }
 
@@ -44,6 +52,6 @@ pub async fn recv_msg(stream: &mut RecvStream) -> Result<Message> {
     info!("read data: {read_data:?}");
 
     let msg = Message::decode(&buf)?;
-    info!("recieved msg: {}", msg.content);
+    info!("recieved msg: {msg:?}");
     Ok(msg)
 }
