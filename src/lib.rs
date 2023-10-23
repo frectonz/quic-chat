@@ -3,19 +3,13 @@ use quinn::{RecvStream, SendStream};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum Message {
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum ClientToServer {
     GetAll,
     Post { content: String },
 }
 
-impl Message {
-    pub fn new_post(content: &str) -> Self {
-        Self::Post {
-            content: content.to_owned(),
-        }
-    }
-
+impl ClientToServer {
     pub fn encode(&self) -> Result<Vec<u8>> {
         Ok(rmp_serde::to_vec(self)?)
     }
@@ -24,34 +18,58 @@ impl Message {
         Ok(rmp_serde::from_slice(slice)?)
     }
 
-    pub fn content(&self) -> &str {
-        match self {
-            Self::GetAll => "GET_ALL",
-            Self::Post { content } => &content,
-        }
+    pub async fn send(&self, stream: &mut SendStream) -> Result<()> {
+        stream.write_all(&self.encode()?).await?;
+        info!("sent msg from client to server: {self:?}");
+        Ok(())
+    }
+
+    pub async fn recv(stream: &mut RecvStream) -> Result<Self> {
+        info!("waiting for data from client");
+
+        let mut buf = [0u8; 1024];
+        let read_data = stream.read(&mut buf).await?;
+        info!("read data sent from client: {read_data:?}");
+
+        let msg = ClientToServer::decode(&buf)?;
+        info!("recieved msg from client: {msg:?}");
+
+        Ok(msg)
     }
 }
 
-impl From<&str> for Message {
-    fn from(content: &str) -> Self {
-        Message::new_post(content)
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum ServerToClient {
+    Hello,
+    Messages(Vec<String>),
+    OK,
+}
+
+impl ServerToClient {
+    pub fn encode(&self) -> Result<Vec<u8>> {
+        Ok(rmp_serde::to_vec(self)?)
     }
-}
 
-pub async fn send_msg(stream: &mut SendStream, msg: Message) -> Result<()> {
-    stream.write_all(&msg.encode()?).await?;
-    info!("sent msg: {msg:?}");
-    Ok(())
-}
+    pub fn decode(slice: &[u8]) -> Result<Self> {
+        Ok(rmp_serde::from_slice(slice)?)
+    }
 
-pub async fn recv_msg(stream: &mut RecvStream) -> Result<Message> {
-    info!("waiting for data");
+    pub async fn send(&self, stream: &mut SendStream) -> Result<()> {
+        stream.write_all(&self.encode()?).await?;
+        info!("sent msg from server to client: {self:?}");
+        Ok(())
+    }
 
-    let mut buf = [0u8; 1024];
-    let read_data = stream.read(&mut buf).await?;
-    info!("read data: {read_data:?}");
+    pub async fn recv(stream: &mut RecvStream) -> Result<Self> {
+        info!("waiting for data from server");
 
-    let msg = Message::decode(&buf)?;
-    info!("recieved msg: {msg:?}");
-    Ok(msg)
+        let mut buf = [0u8; 1024];
+        let read_data = stream.read(&mut buf).await?;
+        info!("read data sent from server: {read_data:?}");
+
+        let msg = ServerToClient::decode(&buf)?;
+        info!("recieved msg from server: {msg:?}");
+
+        Ok(msg)
+    }
 }

@@ -1,10 +1,9 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
+use quic_chat::{ClientToServer, ServerToClient};
 use quinn::{Endpoint, ServerConfig};
 use tracing::info;
-
-use quic_chat::{recv_msg, send_msg, Message};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,21 +26,22 @@ async fn main() -> Result<()> {
         info!("opening bidirectional stream");
         let (mut send_stream, mut recv_stream) = conn.open_bi().await?;
 
-        send_msg(&mut send_stream, "Hello client".into()).await?;
-        let msg = recv_msg(&mut recv_stream).await?;
+        ServerToClient::Hello.send(&mut send_stream).await?;
+        let client_msg = ClientToServer::recv(&mut recv_stream).await?;
 
-        match &msg {
-            Message::GetAll => {
-                let data = rmp_serde::to_vec(&messages)?;
-                send_stream.write_all(&data).await?;
-                info!("sent a list of messages: {}", messages.len());
+        match client_msg {
+            ClientToServer::GetAll => {
+                ServerToClient::Messages(messages.clone())
+                    .send(&mut send_stream)
+                    .await?;
             }
-            Message::Post { content: _ } => {
-                messages.push(msg);
+            ClientToServer::Post { content } => {
+                info!("stored message: {content}");
+                messages.push(content);
+                ServerToClient::OK.send(&mut send_stream).await?;
             }
         }
 
-        send_msg(&mut send_stream, "message received".into()).await?;
         send_stream.finish().await?;
     }
 

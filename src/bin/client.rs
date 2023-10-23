@@ -2,10 +2,9 @@ use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use quic_chat::{ClientToServer, ServerToClient};
 use quinn::{ClientConfig, Endpoint};
 use tracing::info;
-
-use quic_chat::{recv_msg, send_msg, Message};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -17,17 +16,7 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     Post { msg: String },
-    Get,
-}
-
-impl From<Commands> for Message {
-    fn from(val: Commands) -> Self {
-        use Commands::*;
-        match val {
-            Get => Message::GetAll,
-            Post { msg } => Message::Post { content: msg },
-        }
-    }
+    GetAll,
 }
 
 #[tokio::main]
@@ -51,28 +40,29 @@ async fn main() -> Result<()> {
 
     info!("accepting bidirectional stream");
     let (mut send_stream, mut recv_stream) = connection.accept_bi().await?;
+    let hello_msg = ServerToClient::recv(&mut recv_stream).await?;
 
-    let msg: Message = cli.command.into();
+    assert_eq!(hello_msg, ServerToClient::Hello);
 
-    recv_msg(&mut recv_stream).await?;
+    match cli.command {
+        Commands::GetAll => {
+            ClientToServer::GetAll.send(&mut send_stream).await?;
+            let get_all_msg = ServerToClient::recv(&mut recv_stream).await?;
 
-    match &msg {
-        Message::GetAll => {
-            info!("waiting for data");
-
-            let mut buf = [0u8; 1024];
-            let read_data = recv_stream.read(&mut buf).await?;
-            info!("read data: {read_data:?}");
-
-            let messages: Vec<Message> = rmp_serde::from_slice(&buf)?;
-            dbg!(messages);
+            assert!(matches!(get_all_msg, ServerToClient::Messages(_)));
+            dbg!(get_all_msg);
         }
-        Message::Post { content: _ } => {
-            send_msg(&mut send_stream, msg).await?;
+        Commands::Post { msg } => {
+            ClientToServer::Post { content: msg }
+                .send(&mut send_stream)
+                .await?;
+
+            let ok_msg = ServerToClient::recv(&mut recv_stream).await?;
+            assert!(matches!(ok_msg, ServerToClient::OK));
+            dbg!(ok_msg);
         }
     }
 
-    recv_msg(&mut recv_stream).await?;
     send_stream.finish().await?;
     endpoint.wait_idle().await;
 
