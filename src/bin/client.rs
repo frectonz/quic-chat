@@ -48,6 +48,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::GetAll => {
             ClientToServer::GetAll.send(&mut send_stream).await?;
+            send_stream.finish().await?;
             let get_all_msg = ServerToClient::recv(&mut recv_stream).await?;
             assert!(matches!(get_all_msg, ServerToClient::Messages(_)));
             dbg!(get_all_msg);
@@ -56,17 +57,18 @@ async fn main() -> Result<()> {
             ClientToServer::Post { content: msg }
                 .send(&mut send_stream)
                 .await?;
+            send_stream.finish().await?;
             let ok_msg = ServerToClient::recv(&mut recv_stream).await?;
             assert!(matches!(ok_msg, ServerToClient::OK));
         }
         Commands::Clear => {
             ClientToServer::Clear.send(&mut send_stream).await?;
+            send_stream.finish().await?;
             let ok_msg = ServerToClient::recv(&mut recv_stream).await?;
             assert!(matches!(ok_msg, ServerToClient::OK));
         }
     }
 
-    // send_stream.finish().await?;
     endpoint.wait_idle().await;
 
     Ok(())
