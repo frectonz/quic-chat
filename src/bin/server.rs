@@ -40,6 +40,10 @@ async fn main() -> Result<()> {
                 messages.push(content);
                 ServerToClient::OK.send(&mut send_stream).await?;
             }
+            ClientToServer::Clear => {
+                messages.clear();
+                ServerToClient::OK.send(&mut send_stream).await?;
+            }
         }
 
         send_stream.finish().await?;

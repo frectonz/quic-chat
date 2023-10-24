@@ -7,6 +7,7 @@ use tracing::info;
 pub enum ClientToServer {
     GetAll,
     Post { content: String },
+    Clear,
 }
 
 impl ClientToServer {
