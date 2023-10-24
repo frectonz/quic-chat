@@ -3,6 +3,7 @@ use std::{net::SocketAddr, sync::Arc};
 use anyhow::Result;
 use quic_chat::{ClientToServer, ServerToClient};
 use quinn::{Endpoint, ServerConfig};
+use tokio::sync::Mutex;
 use tracing::info;
 
 #[tokio::main]
@@ -16,39 +17,51 @@ async fn main() -> Result<()> {
     let server_addr = "127.0.0.1:5000".parse()?;
     let endpoint = make_server_endpoint(server_addr)?;
 
-    let mut messages = Vec::new();
+    let messages = Arc::new(Mutex::new(Vec::new()));
 
     info!("waiting for connection...");
     while let Some(conn) = endpoint.accept().await {
-        info!("connection accepted: addr={}", conn.remote_address());
-        let conn = conn.await?;
-
-        info!("opening bidirectional stream");
-        let (mut send_stream, mut recv_stream) = conn.open_bi().await?;
-
-        ServerToClient::Hello.send(&mut send_stream).await?;
-        let client_msg = ClientToServer::recv(&mut recv_stream).await?;
-
-        match client_msg {
-            ClientToServer::GetAll => {
-                ServerToClient::Messages(messages.clone())
-                    .send(&mut send_stream)
-                    .await?;
-            }
-            ClientToServer::Post { content } => {
-                info!("stored message: {content}");
-                messages.push(content);
-                ServerToClient::OK.send(&mut send_stream).await?;
-            }
-            ClientToServer::Clear => {
-                messages.clear();
-                ServerToClient::OK.send(&mut send_stream).await?;
-            }
-        }
-
-        send_stream.finish().await?;
+        let messages = Arc::clone(&messages);
+        tokio::spawn(async move { handle_connection(conn, messages).await });
     }
 
+    Ok(())
+}
+
+async fn handle_connection(
+    conn: quinn::Connecting,
+    messages: Arc<Mutex<Vec<String>>>,
+) -> Result<()> {
+    info!("connection accepted: addr={}", conn.remote_address());
+    let conn = conn.await?;
+
+    info!("opening bidirectional stream");
+    let (mut send_stream, mut recv_stream) = conn.open_bi().await?;
+
+    ServerToClient::Hello.send(&mut send_stream).await?;
+    let client_msg = ClientToServer::recv(&mut recv_stream).await?;
+
+    match client_msg {
+        ClientToServer::GetAll => {
+            let messages = messages.lock().await;
+            ServerToClient::Messages(messages.clone())
+                .send(&mut send_stream)
+                .await?;
+        }
+        ClientToServer::Post { content } => {
+            info!("stored message: {content}");
+            let mut messages = messages.lock().await;
+            messages.push(content);
+            ServerToClient::OK.send(&mut send_stream).await?;
+        }
+        ClientToServer::Clear => {
+            let mut messages = messages.lock().await;
+            messages.clear();
+            ServerToClient::OK.send(&mut send_stream).await?;
+        }
+    }
+
+    send_stream.finish().await?;
     Ok(())
 }
 
