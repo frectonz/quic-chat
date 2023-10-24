@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     let (mut send_stream, mut recv_stream) = connection.accept_bi().await?;
     let hello_msg = ServerToClient::recv(&mut recv_stream).await?;
 
-    assert_eq!(hello_msg, ServerToClient::Hello);
+    assert!(matches!(hello_msg, ServerToClient::Hello));
 
     match cli.command {
         Commands::GetAll => {
@@ -59,11 +59,10 @@ async fn main() -> Result<()> {
 
             let ok_msg = ServerToClient::recv(&mut recv_stream).await?;
             assert!(matches!(ok_msg, ServerToClient::OK));
-            dbg!(ok_msg);
         }
     }
 
-    send_stream.finish().await?;
+    // send_stream.finish().await?;
     endpoint.wait_idle().await;
 
     Ok(())

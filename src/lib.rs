@@ -3,7 +3,7 @@ use quinn::{RecvStream, SendStream};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ClientToServer {
     GetAll,
     Post { content: String },
@@ -30,7 +30,7 @@ impl ClientToServer {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ServerToClient {
     Hello,
     Messages(Vec<String>),
