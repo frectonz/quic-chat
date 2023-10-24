@@ -10,14 +10,6 @@ pub enum ClientToServer {
 }
 
 impl ClientToServer {
-    pub fn encode(&self) -> Result<Vec<u8>> {
-        Ok(rmp_serde::to_vec(self)?)
-    }
-
-    pub fn decode(slice: &[u8]) -> Result<Self> {
-        Ok(rmp_serde::from_slice(slice)?)
-    }
-
     pub async fn send(&self, stream: &mut SendStream) -> Result<()> {
         stream.write_all(&self.encode()?).await?;
         info!("sent msg from client to server: {self:?}");
@@ -46,14 +38,6 @@ pub enum ServerToClient {
 }
 
 impl ServerToClient {
-    pub fn encode(&self) -> Result<Vec<u8>> {
-        Ok(rmp_serde::to_vec(self)?)
-    }
-
-    pub fn decode(slice: &[u8]) -> Result<Self> {
-        Ok(rmp_serde::from_slice(slice)?)
-    }
-
     pub async fn send(&self, stream: &mut SendStream) -> Result<()> {
         stream.write_all(&self.encode()?).await?;
         info!("sent msg from server to client: {self:?}");
@@ -73,3 +57,19 @@ impl ServerToClient {
         Ok(msg)
     }
 }
+
+pub trait Msgpack
+where
+    Self: Sized + Serialize + for<'a> Deserialize<'a>,
+{
+    fn encode(&self) -> Result<Vec<u8>> {
+        Ok(rmp_serde::to_vec(self)?)
+    }
+
+    fn decode(slice: &[u8]) -> Result<Self> {
+        Ok(rmp_serde::from_slice(slice)?)
+    }
+}
+
+impl Msgpack for ServerToClient {}
+impl Msgpack for ClientToServer {}
