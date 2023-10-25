@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
 
     info!("waiting for connection...");
     while let Some(conn) = endpoint.accept().await {
-        let messages = Arc::clone(&messages);
+        let messages = messages.clone();
         tokio::spawn(async move { handle_connection(conn, messages).await });
     }
 
