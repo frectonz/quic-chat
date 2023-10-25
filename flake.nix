@@ -50,6 +50,9 @@
             rust-analyzer
             just
             fzf
+
+            parallel
+            hyperfine
           ];
         };
 
