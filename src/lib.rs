@@ -6,6 +6,7 @@ use tracing::info;
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ClientToServer {
     GetAll,
+    GetLen,
     Post { content: String },
     Clear,
 }
@@ -35,6 +36,7 @@ impl ClientToServer {
 pub enum ServerToClient {
     Hello,
     Messages(Vec<String>),
+    MessagesLen(usize),
     OK,
 }
 

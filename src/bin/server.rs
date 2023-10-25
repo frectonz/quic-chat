@@ -48,6 +48,12 @@ async fn handle_connection(
                 .send(&mut send_stream)
                 .await?;
         }
+        ClientToServer::GetLen => {
+            let messages = messages.lock().await;
+            ServerToClient::MessagesLen(messages.len())
+                .send(&mut send_stream)
+                .await?;
+        }
         ClientToServer::Post { content } => {
             info!("stored message: {content}");
             let mut messages = messages.lock().await;

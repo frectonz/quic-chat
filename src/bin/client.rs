@@ -17,6 +17,7 @@ struct Cli {
 enum Commands {
     Post { msg: String },
     GetAll,
+    GetLen,
     Clear,
 }
 
@@ -52,6 +53,13 @@ async fn main() -> Result<()> {
             let get_all_msg = ServerToClient::recv(&mut recv_stream).await?;
             assert!(matches!(get_all_msg, ServerToClient::Messages(_)));
             dbg!(get_all_msg);
+        }
+        Commands::GetLen => {
+            ClientToServer::GetLen.send(&mut send_stream).await?;
+            send_stream.finish().await?;
+            let get_len_msg = ServerToClient::recv(&mut recv_stream).await?;
+            assert!(matches!(get_len_msg, ServerToClient::MessagesLen(_)));
+            dbg!(get_len_msg);
         }
         Commands::Post { msg } => {
             ClientToServer::Post { content: msg }
