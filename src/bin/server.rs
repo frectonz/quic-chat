@@ -18,7 +18,7 @@ async fn main() -> Result<()> {
     let endpoint = make_server_endpoint(server_addr)?;
 
     let messages = Arc::new(RwLock::new(Vec::new()));
-    let (tx, mut rx) = mpsc::channel(1);
+    let (tx, mut rx) = mpsc::channel(100);
 
     {
         let messages = messages.clone();
