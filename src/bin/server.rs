@@ -3,7 +3,7 @@ use std::{net::SocketAddr, sync::Arc};
 use anyhow::Result;
 use quic_chat::{ClientToServer, ServerToClient};
 use quinn::{Endpoint, ServerConfig};
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, RwLock};
 use tracing::info;
 
 #[tokio::main]
@@ -17,12 +17,24 @@ async fn main() -> Result<()> {
     let server_addr = "127.0.0.1:5000".parse()?;
     let endpoint = make_server_endpoint(server_addr)?;
 
-    let messages = Arc::new(Mutex::new(Vec::new()));
+    let messages = Arc::new(RwLock::new(Vec::new()));
+    let (tx, mut rx) = mpsc::channel(1);
+
+    {
+        let messages = messages.clone();
+        tokio::spawn(async move {
+            while let Some(res) = rx.recv().await {
+                let mut messages = messages.write().await;
+                messages.push(res);
+            }
+        });
+    }
 
     info!("waiting for connection...");
     while let Some(conn) = endpoint.accept().await {
         let messages = messages.clone();
-        tokio::spawn(async move { handle_connection(conn, messages).await });
+        let tx = tx.clone();
+        tokio::spawn(async move { handle_connection(conn, messages, tx).await });
     }
 
     Ok(())
@@ -30,7 +42,8 @@ async fn main() -> Result<()> {
 
 async fn handle_connection(
     conn: quinn::Connecting,
-    messages: Arc<Mutex<Vec<String>>>,
+    messages: Arc<RwLock<Vec<String>>>,
+    tx: mpsc::Sender<String>,
 ) -> Result<()> {
     info!("connection accepted: addr={}", conn.remote_address());
     let conn = conn.await?;
@@ -43,25 +56,24 @@ async fn handle_connection(
 
     match client_msg {
         ClientToServer::GetAll => {
-            let messages = messages.lock().await;
+            let messages = messages.read().await;
             ServerToClient::Messages(messages.clone())
                 .send(&mut send_stream)
                 .await?;
         }
         ClientToServer::GetLen => {
-            let messages = messages.lock().await;
+            let messages = messages.read().await;
             ServerToClient::MessagesLen(messages.len())
                 .send(&mut send_stream)
                 .await?;
         }
         ClientToServer::Post { content } => {
             info!("stored message: {content}");
-            let mut messages = messages.lock().await;
-            messages.push(content);
+            tx.send(content).await?;
             ServerToClient::OK.send(&mut send_stream).await?;
         }
         ClientToServer::Clear => {
-            let mut messages = messages.lock().await;
+            let mut messages = messages.write().await;
             messages.clear();
             ServerToClient::OK.send(&mut send_stream).await?;
         }
