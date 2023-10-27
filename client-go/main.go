@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"time"
 
 	"github.com/quic-go/quic-go"
 	"github.com/vmihailenco/msgpack/v5"
@@ -32,15 +33,9 @@ func clientMain() error {
 		return err
 	}
 
-	// message := "hello"
-	// fmt.Printf("Client: Sending '%s'\n", message)
-	// _, err = stream.Write([]byte(message))
-	// if err != nil {
-	// 	return err
-	// }
-
 	buf := make([]byte, 512)
-	_, err = stream.Read(buf)
+	n_bytes, err := stream.Read(buf)
+	fmt.Println("client: read", n_bytes, "bytes")
 	if err != nil {
 		return err
 	}
@@ -50,7 +45,26 @@ func clientMain() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Client: Got", hello)
+	fmt.Println("client: got", hello)
+
+	type PostMessage struct {
+		Post []string
+	}
+
+	message := PostMessage{[]string{"hello"}}
+	buf, err = msgpack.Marshal(&message)
+	fmt.Println(buf)
+	if err != nil {
+		return err
+	}
+	n_bytes, err = stream.Write(buf)
+	fmt.Println("client: sent", n_bytes, "bytes", "len", len(buf))
+	if err != nil {
+		return err
+	}
+	fmt.Println("client: sent", message)
+
+	time.Sleep(1 * time.Second)
 
 	return nil
 }
