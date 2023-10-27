@@ -33,7 +33,10 @@ async fn main() -> Result<()> {
     while let Some(conn) = endpoint.accept().await {
         let messages = messages.clone();
         let tx = tx.clone();
-        tokio::spawn(async move { handle_connection(conn, messages, tx).await });
+        tokio::spawn(async move {
+            let res = handle_connection(conn, messages, tx).await;
+            dbg!(res);
+        });
     }
 
     Ok(())
