@@ -23,7 +23,7 @@ type GetAllResponse struct {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("expected 'post' or 'get-all' subcommands")
+		fmt.Println("expected 'post', 'get-all' or 'clear' subcommands")
 		os.Exit(1)
 	}
 
@@ -84,6 +84,32 @@ func main() {
 
 		assert(response == "OK")
 
+	case "clear":
+		message := "Clear"
+		buf, err = msgpack.Marshal(&message)
+		if err != nil {
+			panic(err)
+		}
+
+		err = write(stream, buf)
+		if err != nil {
+			panic(err)
+		}
+
+		buf, err = read(stream)
+		if err != nil {
+			panic(err)
+		}
+
+		var response string
+		err = msgpack.Unmarshal(buf, &response)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("client: got", response)
+
+		assert(response == "OK")
+
 	case "get-all":
 		message := "GetAll"
 		buf, err = msgpack.Marshal(&message)
@@ -109,7 +135,7 @@ func main() {
 		fmt.Println("client: got", response)
 
 	default:
-		fmt.Println("expected 'post' or 'get-all' subcommands")
+		fmt.Println("expected 'post', 'get-all' or 'clear' subcommands")
 		os.Exit(1)
 	}
 
