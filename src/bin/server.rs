@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use quic_chat::{ClientToServer, ServerToClient};
+use quic_chat::{server_addr, ClientToServer, ServerToClient};
 use quinn::{Endpoint, ServerConfig};
 use tokio::sync::{mpsc, RwLock};
 use tracing::info;
@@ -14,8 +14,7 @@ async fn main() -> Result<()> {
             .finish(),
     )?;
 
-    let server_addr = "127.0.0.1:5000".parse()?;
-    let endpoint = make_server_endpoint(server_addr)?;
+    let endpoint = make_server_endpoint(server_addr())?;
 
     let messages = Arc::new(RwLock::new(Vec::new()));
     let (tx, mut rx) = mpsc::channel(100);

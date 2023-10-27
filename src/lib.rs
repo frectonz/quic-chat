@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use anyhow::Result;
 use quinn::{RecvStream, SendStream};
 use serde::{Deserialize, Serialize};
@@ -76,3 +78,11 @@ where
 
 impl Msgpack for ServerToClient {}
 impl Msgpack for ClientToServer {}
+
+pub fn server_addr() -> SocketAddr {
+    ([127, 0, 0, 1], 5000).into()
+}
+
+pub fn client_addr() -> SocketAddr {
+    ([127, 0, 0, 1], 0).into()
+}

@@ -2,7 +2,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use quic_chat::{ClientToServer, ServerToClient};
+use quic_chat::{client_addr, server_addr, ClientToServer, ServerToClient};
 use quinn::{ClientConfig, Endpoint};
 use tracing::info;
 
@@ -31,13 +31,10 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
-    let server_addr = "127.0.0.1:5000".parse()?;
-    let client_addr = "127.0.0.1:0".parse()?;
-
-    let endpoint = make_client_endpoint(client_addr)?;
+    let endpoint = make_client_endpoint(client_addr())?;
 
     info!("connecting to server...");
-    let connection = endpoint.connect(server_addr, "localhost")?.await?;
+    let connection = endpoint.connect(server_addr(), "localhost")?.await?;
     info!("connected: addr={}", connection.remote_address());
 
     info!("accepting bidirectional stream");
