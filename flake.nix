@@ -53,6 +53,9 @@
 
             parallel
             hyperfine
+
+            go
+            gopls
           ];
         };
 
