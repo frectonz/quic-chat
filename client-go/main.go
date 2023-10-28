@@ -31,14 +31,10 @@ func main() {
 		InsecureSkipVerify: true,
 	}
 	conn, err := quic.DialAddr(context.Background(), addr, tlsConf, nil)
-	if err != nil {
-		panic(err)
-	}
+	try(err)
 
 	stream, err := conn.AcceptStream(context.Background())
-	if err != nil {
-		panic(err)
-	}
+	try(err)
 	var buf []byte
 
 	// 1. read hello message
@@ -46,9 +42,7 @@ func main() {
 
 	var hello string
 	err = msgpack.Unmarshal(buf, &hello)
-	if err != nil {
-		panic(err)
-	}
+	try(err)
 	fmt.Println("client: got", hello)
 	assert(hello == "Hello")
 
@@ -61,25 +55,17 @@ func main() {
 
 		message := PostMessage{[]string{os.Args[2]}}
 		buf, err = msgpack.Marshal(&message)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		err = write(stream, buf)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		buf, err = read(stream)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		var response string
 		err = msgpack.Unmarshal(buf, &response)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 		fmt.Println("client: got", response)
 
 		assert(response == "OK")
@@ -87,25 +73,17 @@ func main() {
 	case "clear":
 		message := "Clear"
 		buf, err = msgpack.Marshal(&message)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		err = write(stream, buf)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		buf, err = read(stream)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		var response string
 		err = msgpack.Unmarshal(buf, &response)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 		fmt.Println("client: got", response)
 
 		assert(response == "OK")
@@ -113,25 +91,17 @@ func main() {
 	case "get-all":
 		message := "GetAll"
 		buf, err = msgpack.Marshal(&message)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		err = write(stream, buf)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		buf, err = read(stream)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 
 		var response GetAllResponse
 		err = msgpack.Unmarshal(buf, &response)
-		if err != nil {
-			panic(err)
-		}
+		try(err)
 		fmt.Println("client: got", response)
 
 	default:
@@ -171,4 +141,10 @@ func write(stream quic.Stream, buf []byte) error {
 	}
 
 	return nil
+}
+
+func try(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
