@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
         let tx = tx.clone();
         tokio::spawn(async move {
             let res = handle_connection(conn, messages, tx).await;
-            dbg!(res);
+            info!("connection ended with: {res:?}");
         });
     }
 
