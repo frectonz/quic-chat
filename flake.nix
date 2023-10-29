@@ -56,6 +56,9 @@
 
             go
             gopls
+
+            lldb_11
+            libclang
           ];
         };
 
