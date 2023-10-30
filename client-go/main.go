@@ -21,9 +21,13 @@ type GetAllResponse struct {
 	Messages []string
 }
 
+type GetLenResponse struct {
+	MessagesLen uint
+}
+
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("expected 'post', 'get-all' or 'clear' subcommands")
+		fmt.Println("expected 'post', 'get-all', 'get-len' or 'clear' subcommands")
 		os.Exit(1)
 	}
 
@@ -37,7 +41,7 @@ func main() {
 	try(err)
 	var buf []byte
 
-	// 1. read hello message
+	// read hello message
 	buf, err = read(stream)
 
 	var hello string
@@ -104,8 +108,24 @@ func main() {
 		try(err)
 		fmt.Println("client: got", response)
 
+	case "get-len":
+		message := "GetLen"
+		buf, err = msgpack.Marshal(&message)
+		try(err)
+
+		err = write(stream, buf)
+		try(err)
+
+		buf, err = read(stream)
+		try(err)
+
+		var response GetLenResponse
+		err = msgpack.Unmarshal(buf, &response)
+		try(err)
+		fmt.Println("client: got", response)
+
 	default:
-		fmt.Println("expected 'post', 'get-all' or 'clear' subcommands")
+		fmt.Println("expected 'post', 'get-all', 'get-len' or 'clear' subcommands")
 		os.Exit(1)
 	}
 
