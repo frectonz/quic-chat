@@ -27,8 +27,7 @@ type GetLenResponse struct {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("expected 'post', 'get-all', 'get-len' or 'clear' subcommands")
-		os.Exit(1)
+		unknownCommandExit()
 	}
 
 	tlsConf := &tls.Config{
@@ -125,8 +124,7 @@ func main() {
 		fmt.Println("client: got", response)
 
 	default:
-		fmt.Println("expected 'post', 'get-all', 'get-len' or 'clear' subcommands")
-		os.Exit(1)
+		unknownCommandExit()
 	}
 
 }
@@ -167,4 +165,9 @@ func try(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func unknownCommandExit() {
+	fmt.Println("expected 'post', 'get-all', 'get-len' or 'clear' subcommands")
+	os.Exit(1)
 }
